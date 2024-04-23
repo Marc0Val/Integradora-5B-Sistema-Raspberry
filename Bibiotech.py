@@ -9,6 +9,8 @@ from board import SCL, SDA
 import busio
 from PIL import Image, ImageDraw, ImageFont
 import adafruit_ssd1306
+import paho.mqtt.client as mqtt
+from temp import leer_sensor_y_publicar  # Importar la función del sensor DHT11
 
 # Arreglo con el display del teclado
 teclado_arreglo = [
@@ -36,6 +38,12 @@ pin_led = 4
 # Inicialización del bus I2C y del objeto SSD1306 para la pantalla OLED
 i2c = busio.I2C(SCL, SDA)
 disp = adafruit_ssd1306.SSD1306_I2C(128, 64, i2c)
+
+# Configuración del MQTT
+broker_address = "broker.hivemq.com"
+topic_temp = "ruben/temperatura"
+topic_hum = "ruben/humedad"
+client = mqtt.Client()
 
 def mostrar_mensaje(mensaje):
     # Limpiar la pantalla
@@ -180,6 +188,7 @@ def enviar_prestamo_api(prestamo_info):
         mostrar_mensaje("Error al registrar préstamo")
         time.sleep(1)
         print("Error al enviar el préstamo a la API:", str(e))
+
 # funcion externa para resetear el programa en dado caso que se use
 def reset_program():
     GPIO.cleanup()
@@ -196,6 +205,10 @@ def main():
 
         # Ciclo principal
         while True:
+            # Ejecutar la lectura y publicación del sensor DHT11 cada 10 segundos
+            leer_sensor_y_publicar()
+            time.sleep(10)
+
             # Mostrar el menú de selección
             mostrar_mensaje("Menu de seleccion\n1: Visita\n2: Agregar Alumno\n3: Préstamo")
             tecla = None
@@ -203,6 +216,7 @@ def main():
                 tecla = leer_tecla()
             # Ejecutar la opción seleccionada
             if tecla == 1:
+                # Código para el modo de visita
                 mostrar_mensaje("Modo De Visita\Seleccionado")
                 time.sleep(2)
                 mostrar_mensaje("Selecciona tu motivo \n A)Consulta B)Material\n C)Grupo D)Computador")
@@ -273,7 +287,9 @@ def main():
                     else:
                         mostrar_mensaje("Código QR no detectado \nIntente de nuevo")
                         time.sleep(2)
+                pass
             elif tecla == 2:
+                # Código para el modo de agregar alumno
                 print("Modo Agregar Alumno seleccionado")
                 mostrar_mensaje("Modo Agregar Alumno\nSeleccionado")
                 time.sleep(2)
@@ -329,8 +345,10 @@ def main():
                         time.sleep(2)
                 else:
                     mostrar_mensaje("Código no detectado\nIntente de nuevo")
-                    time.sleep(2)                    
+                    time.sleep(2)    
+                pass
             elif tecla == 3:
+                # Código para el modo de préstamo
                 mostrar_mensaje("Modo Préstamo\nSeleccionado")
                 time.sleep(2)
                 mostrar_mensaje("Escanea el material")
@@ -388,10 +406,10 @@ def main():
                 else:
                     mostrar_mensaje("Código invalido\nEscanea el material\nIntente de nuevo")
                     time.sleep(2)
+                pass
     except KeyboardInterrupt:
-        # Limpiar los pines en caso de una interrupción de teclado
+        print("Programa detenido por el usuario")
+    finally:
         GPIO.cleanup()
-
 if __name__ == "__main__":
     main()
-
